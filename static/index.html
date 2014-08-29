@@ -1,0 +1,84 @@
+<!doctype html>
+<meta charset=utf-8>
+<style>
+</style>
+<textarea></textarea>
+<button id=replace>Replace</button>
+<button id=append>Append</button>
+
+<table class="deck-list">
+  <thead>
+    <tr>
+    <th>Card</th><th>Low</th><th>Median</th><th>High</th>
+    </tr>
+    <tr>
+    <th>Total</th><th class=low></th><th class=mid></th><th class=hi></th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<script src="http://tappedout.net/tappedout.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.6.0/underscore-min.js"></script>
+<!--script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.1.1/list.min.js"></script-->
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+<script>
+
+$('#append').click(append);
+$('#replace').click(function() {
+    $('tbody').empty();
+    updateTotal();
+    append();
+});
+function append() {
+  var lines = document.querySelector('textarea').value;
+  lines = lines.split('\n');
+  for (var i = lines.length - 1; i >= 0; i--) {
+    var tr = document.createElement('tr');
+    lines[i] = lines[i].replace(/ *\*F\*/, '');
+    tr.innerHTML = '<td>' + lines[i] + '</td><td class=low></td><td class=mid></td><td class=hi></td>';
+    var parts = /(\d*)x? *(.*)/.exec(lines[i]);
+    $(tr).data('n', +parts[1] || 1);
+    fetch(parts[2].trim(), tr);
+    $('tbody').prepend(tr);
+  }
+};
+
+function fetch(cardName, parentNode) {
+  $.ajax('/api/price', { data: { cardName: cardName } })
+    .done(function(body) {
+      var price = JSON.parse(body)
+      $('.low', parentNode)
+        .text(formatPrice(price.Low))
+        .data('price', price.Low);
+      $('.mid', parentNode)
+        .text(formatPrice(price.Mid))
+        .data('price', price.Mid);
+      $('.hi', parentNode)
+        .text(formatPrice(price.High))
+        .data('price', price.High);
+
+        debounceUpdateTotal();
+    });
+}
+
+var debounceUpdateTotal = _.debounce(updateTotal, 200);
+
+function updateTotal() {
+  function update(from, to) {
+    var t = 0;
+    from.each(function() {
+      var mul = $(this).parents('tr').data('n');
+      t += ($(this).data('price') || 0) * mul;
+    });
+    to.text(formatPrice(t));
+  }
+  update($('tbody .low'), $('thead .low'));
+  update($('tbody .mid'), $('thead .mid'));
+  update($('tbody .hi'), $('thead .hi'));
+}
+
+function formatPrice(cents) {
+  return '$' + (cents/100).toFixed(2);
+}
+</script>
