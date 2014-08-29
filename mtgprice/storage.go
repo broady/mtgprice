@@ -14,6 +14,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/broady/mtgprice/gatherer"
 	"github.com/cznic/kv"
 )
 
@@ -32,13 +33,14 @@ type Client struct {
 type CardInfo struct {
 	Name string `json:"name"`
 	// NOTE: there is one card with .5 mana cost.
-	CMC       float64  `json:"cmc"`
-	ManaCost  string   `json:"manaCost"`
-	Rarity    string   `json:"rarity"`
-	Power     string   `json:"power,omitempty"`
-	Toughness string   `json:"toughness,omitempty"`
-	Type      string   `json:"type"`
-	Types     []string `json:"types"`
+	CMC          float64  `json:"cmc"`
+	MultiverseID int      `json:"multiverseid"`
+	ManaCost     string   `json:"manaCost"`
+	Rarity       string   `json:"rarity"`
+	Power        string   `json:"power,omitempty"`
+	Toughness    string   `json:"toughness,omitempty"`
+	Type         string   `json:"type"`
+	Types        []string `json:"types"`
 }
 
 type Price struct {
@@ -47,8 +49,8 @@ type Price struct {
 
 // entry represents an entry for the database.
 type entry struct {
-	TCGPrice        *Price
-	CommunityRating *float64
+	TCGPrice     *Price
+	GathererInfo *gatherer.CardInfo
 }
 
 func Open(opts Opts) (c *Client, err error) {
@@ -125,23 +127,67 @@ func (c *Client) CardInfo(cardName string) (card CardInfo, ok bool) {
 	return
 }
 
-func (c *Client) PriceForCard(cardName string) (prices Price, err error) {
-	// TODO: handle race condition properly.
-	entry := new(entry)
-	err = c.get(cardName, entry)
-	if err == nil && entry.TCGPrice != nil {
-		log.Printf("cache hit: %s", cardName)
-		return *entry.TCGPrice, nil
+func (c *Client) getEntry(cardName string) (result entry, err error) {
+	e := new(entry)
+	ci, ok := c.CardInfo(cardName)
+	if !ok {
+		return *e, errors.New("card not found")
 	}
-	if err == doesNotExistError || entry.TCGPrice == nil {
-		log.Printf("cache miss, fetching from network: %s", cardName)
-		prices, err = c.priceForCard(cardName)
+	err = c.get(cardName, e)
+	if err != nil && err != doesNotExistError {
+		return *e, err
+	}
+	if err == nil && e.TCGPrice != nil && e.GathererInfo != nil {
+		//log.Printf("cache hit: %s", cardName)
+		return *e, nil
+	}
+	if e.TCGPrice == nil {
+		log.Printf("fetching tcg price: %s", cardName)
+		prices, err := c.priceForCard(cardName)
 		if err != nil {
-			return
+			return *e, err
 		}
-		entry.TCGPrice = &prices
-		go c.set(cardName, entry)
+		e.TCGPrice = &prices
+		go c.set(cardName, e)
 	}
+	if e.GathererInfo == nil {
+		log.Printf("fetching gatherer data: %s", cardName)
+		gInfo, err := gatherer.Info(ci.MultiverseID)
+		if err != nil {
+			return *e, err
+		}
+		e.GathererInfo = gInfo
+		go c.set(cardName, e)
+	}
+	return *e, nil
+}
+
+type info struct {
+	entry
+	CardInfo
+}
+
+func (c *Client) RichInfo(cardName string) (i info, err error) {
+	ci, ok := c.CardInfo(cardName)
+	if !ok {
+		return i, errors.New("could not find card")
+	}
+	i.CardInfo = ci
+
+	e, err := c.getEntry(cardName)
+	if err != nil {
+		return
+	}
+	i.entry = e
+	return
+}
+
+func (c *Client) PriceForCard(cardName string) (prices Price, err error) {
+	e, err := c.getEntry(cardName)
+	if err != nil {
+		return
+	}
+	prices = *e.TCGPrice
 	return
 }
 

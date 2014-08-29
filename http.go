@@ -34,6 +34,7 @@ func main() {
 	http.Handle("/", serveFile(filepath.Join(staticDir, "index.html")))
 	http.Handle("/static", http.StripPrefix("static", http.FileServer(http.Dir(staticDir))))
 	http.HandleFunc("/api/price", priceHandler)
+	http.HandleFunc("/api/info", infoHandler)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -62,6 +63,17 @@ func priceHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(p)
+}
+
+func infoHandler(w http.ResponseWriter, r *http.Request) {
+	name := r.FormValue("cardName")
+	i, err := client.RichInfo(name)
+	if err != nil {
+		log.Printf("card err (%s): %v", name, err)
+		http.NotFound(w, r)
+		return
+	}
+	json.NewEncoder(w).Encode(i)
 }
 
 func handleInterrupt() {

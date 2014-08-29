@@ -5,20 +5,27 @@
   body {
     font-family: sans-serif;
   }
-  #min-price-filter {
+  .right > div {
+    display: inline-block;
+  }
+  .right {
     float: right;
+    width: 600px;
   }
 </style>
 <textarea></textarea>
 <button id=replace>Replace</button>
 <button id=append>Append</button>
 
-<div id=min-price-filter></div>
+<div class=right>
+  <div id=min-price-filter></div>
+  <div id=rating-filter></div>
+</div>
 
 <table class=dc-datatable>
   <thead>
     <tr>
-      <th>N</th><th>Card</th><th>Low</th><th>Median</th><th>High</th>
+      <th>N</th><th>Card</th><th>Low</th><th>Median</th><th>High</th><th>Rating</th><th>Votes</th>
     </tr>
     <tr>
       <th>Total</th><th class=n></th><th class=low></th><th class=mid></th><th class=hi></th>
@@ -39,30 +46,49 @@
   var globalId = 0;
   var idDimension = data.dimension(function(d) { return d.id });
   var nameDimension = data.dimension(function(d) { return d.name });
-  var accessPriceMin = function(d) { return d.price.Low };
+  var accessRating = function(d) { return d.GathererInfo.CommunityRating };
+  var ratingDimension = data.dimension(accessRating);
+  var accessPriceMin = function(d) { return d.TCGPrice.Low };
   var minPriceDimension = data.dimension(accessPriceMin);
   var minPriceSum = data.groupAll().reduceSum(accessPriceMin);
-  var accessPriceMid = function(d) { return d.price.Mid };
+  var accessPriceMid = function(d) { return d.TCGPrice.Mid };
   var midPriceDimension = data.dimension(accessPriceMid);
   var midPriceSum = data.groupAll().reduceSum(accessPriceMid);
-  var accessPriceHi = function(d) { return d.price.High };
+  var accessPriceHi = function(d) { return d.TCGPrice.High };
   var hiPriceDimension = data.dimension(accessPriceHi);
   var hiPriceSum = data.groupAll().reduceSum(accessPriceHi);
   var accessNumCards = function(d) { return d.n };
   var numCardSum = data.groupAll().reduceSum(accessNumCards);
   var accessName = function(d) { return d.name };
 
-  $('#replace').click(append);
+  $('#replace').click(function() {
+    idDimension.filterAll();
+    data.remove();
+    append();
+  });
+  $('#append').click(append);
 
   var minPriceChart = dc.barChart('#min-price-filter')
-    .height(500)
+    .height(200)
     .width(500)
     .group(minPriceDimension.group())
     .dimension(minPriceDimension)
     .x(d3.scale.log().base(2).domain([1, 50000]))
     .elasticX(true)
-    .elasticY(true);
+    .elasticY(true)
+    .xAxisPadding('10%')
+    .gap(0);
   minPriceChart.xAxis().tickFormat(formatPrice);
+
+  var ratingChart = dc.barChart('#rating-filter')
+    .height(200)
+    .width(500)
+    .group(ratingDimension.group())
+    .dimension(ratingDimension)
+    .elasticY(true)
+    .x(d3.scale.linear().domain([-0.1, 5.1]))
+    .gap(1)
+    .xAxisPadding('10%');
 
   var dataTable = dc.dataTable('.dc-datatable')
     .renderlet(function() {
@@ -82,7 +108,9 @@
       function(d) { return d.name },
       formatPrice(accessPriceMin),
       formatPrice(accessPriceMid),
-      formatPrice(accessPriceHi)
+      formatPrice(accessPriceHi),
+      function(d) { return d.GathererInfo.CommunityRating },
+      function(d) { return d.GathererInfo.CommunityVotes }
     ]);
 
   dc.renderAll();
@@ -103,9 +131,9 @@
   }
 
   function fetch(entry) {
-    $.ajax('/api/price', { data: { cardName: entry.name } })
+    $.ajax('/api/info', { data: { cardName: entry.name } })
       .done(function(body) {
-        entry.price = JSON.parse(body)
+        _.extend(entry, JSON.parse(body))
         data.add([entry]);
         debounceRender();
       });
