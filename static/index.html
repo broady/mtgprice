@@ -21,7 +21,7 @@
       <th>N</th><th>Card</th><th>Low</th><th>Median</th><th>High</th>
     </tr>
     <tr>
-    <th>Total</th><th class=low></th><th class=mid></th><th class=hi></th>
+      <th>Total</th><th class=n></th><th class=low></th><th class=mid></th><th class=hi></th>
     </tr>
   </thead>
   <tbody></tbody>
@@ -38,6 +38,7 @@
   var data = crossfilter();
   var globalId = 0;
   var idDimension = data.dimension(function(d) { return d.id });
+  var nameDimension = data.dimension(function(d) { return d.name });
   var accessPriceMin = function(d) { return d.price.Low };
   var minPriceDimension = data.dimension(accessPriceMin);
   var minPriceSum = data.groupAll().reduceSum(accessPriceMin);
@@ -59,10 +60,21 @@
     .group(minPriceDimension.group())
     .dimension(minPriceDimension)
     .x(d3.scale.log().base(2).domain([1, 50000]))
+    .elasticX(true)
     .elasticY(true);
-  minPriceChart.xAxis().ticks(5).tickValues([10, 100, 300, 1000, 3000, 10000, 50000]).tickFormat(formatPrice);
+  minPriceChart.xAxis().tickFormat(formatPrice);
 
-  dc.dataTable('.dc-datatable')
+  var dataTable = dc.dataTable('.dc-datatable')
+    .renderlet(function() {
+      $('th.low').text(formatPrice(
+          reduceMultiplyByN(data.groupAll(), accessPriceMin).value()));
+      $('th.mid').text(formatPrice(
+          reduceMultiplyByN(data.groupAll(), accessPriceMid).value()));
+      $('th.hi').text(formatPrice(
+          reduceMultiplyByN(data.groupAll(), accessPriceHi).value()));
+      $('th.n').text(reduceMultiplyByN(data.groupAll(), always(1)).value());
+    })
+    .size(1e10) // really big.
     .group(function(d) { return 'Cards' })
     .dimension(idDimension)
     .columns([
@@ -103,6 +115,20 @@
 
   function render() {
     dc.redrawAll();
+  }
+
+  function reduceMultiplyByN(group, accessor) {
+    return group.reduce(function reduceAdd(p, v) {
+        return p + (v.n * accessor(v));
+      }, function reduceRemove(p, v) {
+        return p - (v.n * accessor(v));
+      }, function reduceInitial() {
+        return 0;
+      });
+  }
+
+  function always(v) {
+    return function() { return v; }
   }
 
   function formatPrice(param) {
