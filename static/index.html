@@ -87,7 +87,7 @@
     .dimension(ratingDimension)
     .elasticY(true)
     .x(d3.scale.linear().domain([-0.1, 5.1]))
-    .gap(1)
+    .barPadding(10)
     .xAxisPadding('10%');
 
   var dataTable = dc.dataTable('.dc-datatable')
@@ -139,7 +139,7 @@
       });
   }
 
-  var debounceRender = _.debounce(render, 50);
+  var debounceRender = _.debounce(render, 10);
 
   function render() {
     dc.redrawAll();

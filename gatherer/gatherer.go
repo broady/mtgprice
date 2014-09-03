@@ -8,6 +8,8 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 type CardInfo struct {
@@ -43,25 +45,16 @@ func getPageByID(multiverseID int) ([]byte, error) {
 	return nil, errors.New("http response error")
 }
 
-func Info(multiverseID int) (i *CardInfo, err error) {
-	page, err := getPageByID(multiverseID)
-	if err != nil {
-		return
-	}
-	matches := ratingRegexp.FindAllSubmatch(page, 1)
-	if matches == nil {
-		return nil, errors.New("could not find rating on page")
-	}
-	rating, err := strconv.ParseFloat(string(matches[0][1]), 64)
+func byUrl(url string) (*CardInfo, error) {
+	d, err := goquery.NewDocument(url)
 	if err != nil {
 		return nil, err
 	}
-
-	matches = votesRegexp.FindAllSubmatch(page, 1)
-	if matches == nil {
-		return nil, errors.New("could not find num votes on page")
+	rating, err := strconv.ParseFloat(d.Find(".textRating .textRatingValue").First().Text(), 64)
+	if err != nil {
+		return nil, err
 	}
-	votes, err := strconv.Atoi(string(matches[0][1]))
+	votes, err := strconv.Atoi(d.Find(".textRating .totalVotesValue").First().Text())
 	if err != nil {
 		return nil, err
 	}
@@ -69,4 +62,15 @@ func Info(multiverseID int) (i *CardInfo, err error) {
 		CommunityRating: rating,
 		CommunityVotes:  votes,
 	}, nil
+}
+
+func Info(multiverseID int) (*CardInfo, error) {
+	url := fmt.Sprintf("http://gatherer.wizards.com/Pages/Card/Details.aspx?multiverseid=%d", multiverseID)
+	return byUrl(url)
+}
+
+func InfoByName(cardName string) (*CardInfo, error) {
+	url := fmt.Sprintf("http://gatherer.wizards.com/Pages/Card/Details.aspx?name=%s",
+		url.QueryEscape(cardName))
+	return byUrl(url)
 }

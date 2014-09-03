@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strings"
 	"syscall"
 
 	"go/build"
@@ -72,6 +73,10 @@ func infoHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("card err (%s): %v", name, err)
 		http.NotFound(w, r)
 		return
+	}
+	if len(i.Names) != 0 {
+		i.Name = strings.Join(i.Names, " // ")
+		i.Names = []string{}
 	}
 	json.NewEncoder(w).Encode(i)
 }
