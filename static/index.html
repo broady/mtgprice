@@ -12,11 +12,18 @@
     float: right;
     width: 600px;
   }
+  #card {
+    position: fixed;
+    top: 0;
+    left: 550px;
+    display: none;
+  }
 </style>
 <textarea></textarea>
 <button id=replace>Replace</button>
 <button id=append>Append</button>
 
+<div id="card"><img></div>
 <div class=right>
   <div id=min-price-filter></div>
   <div id=rating-filter></div>
@@ -67,6 +74,16 @@
     append();
   });
   $('#append').click(append);
+
+  var cardNameSelector = 'td.dc-table-column._1'
+  $('table').on('mouseover', cardNameSelector, function() {
+    $('#card img').attr('src',
+        'http://gatherer.wizards.com/Handlers/Image.ashx?name=' +
+        encodeURIComponent($(this).text()) + '&type=card');
+    $('#card').show();
+  }).on('mouseout', cardNameSelector, function() {
+    $('#card').hide();
+  });
 
   var minPriceChart = dc.barChart('#min-price-filter')
     .height(200)
