@@ -55,6 +55,7 @@
   var nameDimension = data.dimension(function(d) { return d.name });
   var accessRating = function(d) { return d.GathererInfo.CommunityRating };
   var ratingDimension = data.dimension(accessRating);
+  var quantizedRatingDimension = data.dimension(function(d) { return Math.floor(accessRating(d) * 8) / 8 });
   var accessPriceMin = function(d) { return d.TCGPrice.Low };
   var minPriceDimension = data.dimension(accessPriceMin);
   var minPriceSum = data.groupAll().reduceSum(accessPriceMin);
@@ -100,8 +101,8 @@
   var ratingChart = dc.barChart('#rating-filter')
     .height(200)
     .width(500)
-    .group(ratingDimension.group())
-    .dimension(ratingDimension)
+    .group(quantizedRatingDimension.group())
+    .dimension(quantizedRatingDimension)
     .elasticY(true)
     .x(d3.scale.linear().domain([-0.1, 5.1]))
     .barPadding(10)
