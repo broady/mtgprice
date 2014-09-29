@@ -69,30 +69,25 @@ func Open(opts Opts) (c *Client, err error) {
 	return
 }
 
-type cardInfoData struct {
-	Cards []*CardInfo `json:"cards"`
-}
-
 func readCardData(fn string) (map[string]*CardInfo, error) {
 	f, err := os.Open(fn)
 	if err != nil {
 		return nil, err
 	}
-	var cardData map[string]cardInfoData
+	var cardData map[string]*CardInfo
 	if err := json.NewDecoder(f).Decode(&cardData); err != nil {
 		return nil, fmt.Errorf("could not read card json file: %v", err)
 	}
+	// Normalize.
 	out := make(map[string]*CardInfo)
-	for _, set := range cardData {
-		for _, card := range set.Cards {
-			if len(card.Names) != 0 {
-				out[strings.ToLower(strings.Join(card.Names, " & "))] = card
-				out[strings.ToLower(strings.Join(card.Names, " / "))] = card
-				out[strings.ToLower(strings.Join(card.Names, " // "))] = card
-			}
-			card.Name = normalizeCardName(card.Name)
-			out[strings.ToLower(card.Name)] = card
+	for _, card := range cardData {
+		if len(card.Names) != 0 {
+			out[strings.ToLower(strings.Join(card.Names, " & "))] = card
+			out[strings.ToLower(strings.Join(card.Names, " / "))] = card
+			out[strings.ToLower(strings.Join(card.Names, " // "))] = card
 		}
+		card.Name = normalizeCardName(card.Name)
+		out[strings.ToLower(card.Name)] = card
 	}
 	return out, nil
 }

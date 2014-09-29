@@ -23,7 +23,7 @@ func main() {
 	}
 	c, err := mtgprice.Open(mtgprice.Opts{
 		Filename: "mtgprice.db",
-		CardData: filepath.Join(staticDir, "AllSets.json"),
+		CardData: filepath.Join(staticDir, "AllCards.json"),
 	})
 	if err != nil {
 		log.Fatalf("could not open db: %v", err)
