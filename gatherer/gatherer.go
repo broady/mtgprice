@@ -1,9 +1,8 @@
 package gatherer
 
 import (
-	"errors"
 	"fmt"
-	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -22,36 +21,23 @@ var (
 	votesRegexp  = regexp.MustCompile(`class="totalVotesValue">([\d]*)</span>`)
 )
 
-func getPageByName(cardName string) ([]byte, error) {
-	resp, err := http.Get("http://gatherer.wizards.com/Pages/Card/Details.aspx?name=" +
-		url.QueryEscape(cardName))
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
-		return ioutil.ReadAll(resp.Body)
-	}
-	return nil, errors.New("http response error")
-}
-
-func getPageByID(multiverseID int) ([]byte, error) {
-	resp, err := http.Get(fmt.Sprintf("http://gatherer.wizards.com/Pages/Card/Details.aspx?multiverseid=%d", multiverseID))
-	if err != nil {
-		return nil, err
-	}
-	if resp.StatusCode >= 200 && resp.StatusCode < 400 {
-		return ioutil.ReadAll(resp.Body)
-	}
-	return nil, errors.New("http response error")
-}
-
 func byUrl(url string) (*CardInfo, error) {
-	d, err := goquery.NewDocument(url)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("got bad status code: %d", resp.StatusCode)
+	}
+	d, err := goquery.NewDocumentFromResponse(resp)
 	if err != nil {
 		return nil, err
 	}
 	rating, err := strconv.ParseFloat(d.Find(".textRating .textRatingValue").First().Text(), 64)
 	if err != nil {
+		if html, err := d.Html(); err == nil {
+			log.Print(html)
+		}
 		return nil, err
 	}
 	votes, err := strconv.Atoi(d.Find(".textRating .totalVotesValue").First().Text())
