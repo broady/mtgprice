@@ -10,3 +10,9 @@ Notes:
 
   * No proper error handling in the UI. Some cards may not show up.
   * Need to add retries for the HTTP calls to pricing and Gatherer.
+
+```
+$ go get github.com/broady/mtgprice
+$ mkdir ~/.mtg && cd ~/.mtg
+$ mtgprice
+```
