@@ -8,5 +8,5 @@ Pretty-printed using [github.com/broady/json_prettyprint](https://github.com/bro
 
 Notes:
 
-  * Doesn't handle split cards very well.
-  * Some flakiness when fetching from Gatherer website. (regex issue?)
+  * No proper error handling in the UI. Some cards may not show up.
+  * Need to add retries for the HTTP calls to pricing and Gatherer.
