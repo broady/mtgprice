@@ -6,16 +6,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net/http"
-	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/broady/mtgprice/gatherer"
+	"github.com/broady/mtgprice/tcg"
 	"github.com/cznic/kv"
 )
 
@@ -45,13 +42,9 @@ type CardInfo struct {
 	Types        []string `json:"types"`
 }
 
-type Price struct {
-	Low, Mid, High int // Expressed in cents of a US dollar.
-}
-
 // entry represents an entry for the database.
 type entry struct {
-	TCGPrice     *Price
+	TCGPrice     *tcg.Price
 	GathererInfo *gatherer.CardInfo
 }
 
@@ -99,31 +92,6 @@ func (c *Client) Close() error {
 	return nil
 }
 
-func parsePrices(in [3]string) (out Price, err error) {
-	out.Low, err = parsePrice(in[0])
-	if err != nil {
-		return
-	}
-	out.Mid, err = parsePrice(in[1])
-	if err != nil {
-		return
-	}
-	out.High, err = parsePrice(in[2])
-	return
-}
-
-// parsePrice parses a string in format "$1.00" to 100
-func parsePrice(p string) (int, error) {
-	if p == "" || p[0] != '$' {
-		return 0, fmt.Errorf("invalid price: %s", p)
-	}
-	if p[len(p)-3] != '.' {
-		return 0, errors.New("invalid price format. expected cents at the end")
-	}
-	cents := p[1:len(p)-3] + p[len(p)-2:]
-	return strconv.Atoi(cents)
-}
-
 func normalizeCardName(s string) string {
 	s = strings.Replace(s, "Æ", "Ae", -1)
 	return strings.Replace(s, "’", "'", -1)
@@ -158,7 +126,7 @@ func (c *Client) getEntry(cardName string) (result entry, err error) {
 		if err != nil {
 			return *e, err
 		}
-		e.TCGPrice = &prices
+		e.TCGPrice = prices
 		go c.set(ci.Name, e)
 	}
 	if e.GathererInfo == nil {
@@ -202,7 +170,7 @@ func (c *Client) RichInfo(cardName string) (i info, err error) {
 	return
 }
 
-func (c *Client) PriceForCard(cardName string) (prices Price, err error) {
+func (c *Client) PriceForCard(cardName string) (prices tcg.Price, err error) {
 	e, err := c.getEntry(cardName)
 	if err != nil {
 		return
@@ -241,25 +209,10 @@ func (c *Client) set(key string, val interface{}) error {
 	return err
 }
 
-func (c *Client) priceForCard(ci CardInfo) (prices Price, err error) {
+func (c *Client) priceForCard(ci CardInfo) (prices *tcg.Price, err error) {
 	name := ci.Name
 	if len(ci.Names) != 0 {
 		name = strings.Join(ci.Names, " // ")
 	}
-	resp, err := http.Get("http://magictcgprices.appspot.com/api/tcgplayer/price.json?cardname=" +
-		url.QueryEscape(name))
-	if err != nil {
-		return
-	}
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return
-	}
-	var in [3]string
-	err = json.Unmarshal(body, &in)
-	if err != nil {
-		log.Printf("error parsing prices: %v - %s", err, body)
-		return
-	}
-	return parsePrices(in)
+	return tcg.Get(name)
 }
