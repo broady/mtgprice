@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -56,7 +57,7 @@ func Info(multiverseID int) (*CardInfo, error) {
 }
 
 func InfoByName(cardName string) (*CardInfo, error) {
-	url := fmt.Sprintf("http://gatherer.wizards.com/Pages/Card/Details.aspx?name=%s",
-		url.QueryEscape(cardName))
-	return byUrl(url)
+	// Gatherer doesn't like the encoded "&"
+	cardName = strings.Replace(url.QueryEscape(cardName), url.QueryEscape("&"), "&", -1)
+	return byUrl("http://gatherer.wizards.com/Pages/Card/Details.aspx?name=" + cardName)
 }
