@@ -16,7 +16,7 @@ type Price struct {
 }
 
 func Get(name string) (prices *Price, err error) {
-	resp, err := http.Get("http://magic.tcgplayer.com/db/magic_single_card.asp?cn=" + url.QueryEscape(name))
+	resp, err := http.Get("http://magic.tcgplayer.com/db/WP-CH.asp?CN=" + url.QueryEscape(name))
 	if err != nil {
 		return nil, err
 	}
@@ -27,8 +27,8 @@ func Get(name string) (prices *Price, err error) {
 	if err != nil {
 		return nil, err
 	}
-	highText := d.Find("td:contains('H:')").FilterFunction(func(idx int, s *goquery.Selection) bool {
-		return "H:" == strings.TrimSpace(s.Text())
+	highText := d.Find("div:contains('High')").FilterFunction(func(idx int, s *goquery.Selection) bool {
+		return "High" == strings.TrimSpace(s.Text())
 	})
 	if highText.Length() != 1 {
 		fmt.Print(d.Html())
@@ -36,23 +36,24 @@ func Get(name string) (prices *Price, err error) {
 	}
 	nodeText := highText.
 		Parent().
+		Next().
 		Children().
 		Map(func(idx int, sel *goquery.Selection) string {
 		return sel.Text()
 	})
-	if len(nodeText) != 7 {
+	if len(nodeText) != 3 {
 		return nil, fmt.Errorf("could not find prices on page (unexpected element length for price section)")
 	}
 	prices = &Price{}
-	prices.High, err = parsePrice(nodeText[2])
+	prices.High, err = parsePrice(nodeText[0])
 	if err != nil {
 		return nil, err
 	}
-	prices.Mid, err = parsePrice(nodeText[4])
+	prices.Mid, err = parsePrice(nodeText[1])
 	if err != nil {
 		return nil, err
 	}
-	prices.Low, err = parsePrice(nodeText[6])
+	prices.Low, err = parsePrice(nodeText[2])
 	if err != nil {
 		return nil, err
 	}
