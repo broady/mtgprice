@@ -40,6 +40,8 @@ type CardInfo struct {
 	Toughness    string   `json:"toughness,omitempty"`
 	Type         string   `json:"type"`
 	Types        []string `json:"types"`
+	Colors       []string `json:"colors"`
+	Text         string   `json:"text"`
 }
 
 // entry represents an entry for the database.
