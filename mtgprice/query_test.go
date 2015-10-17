@@ -54,4 +54,14 @@ func TestQueryMatch(t *testing.T) {
 	if q.Match(testCards[1]) {
 		t.Errorf("match; want no match")
 	}
+	q = ParseQuery("alice bob")
+	if q.Match(&CardInfo{Name:"Alice"}) {
+		t.Errorf("name match; want no match")
+	}
+	if q.Match(&CardInfo{Name:"Bob"}) {
+		t.Errorf("name match; want no match")
+	}
+	if !q.Match(&CardInfo{Name:"Bob Alice"}) {
+		t.Errorf("no name match; want match")
+	}
 }

@@ -15,15 +15,9 @@ type Query struct {
 }
 
 func (q *Query) Match(c *CardInfo) bool {
-Names:
 	for _, qn := range q.Name {
 		if strings.Contains(strings.ToLower(c.Name), qn) {
 			continue
-		}
-		for _, n := range c.Names {
-			if strings.Contains(strings.ToLower(n), qn) {
-				continue Names
-			}
 		}
 		debugf("name %q", qn)
 		return false
@@ -34,15 +28,9 @@ Names:
 			return false
 		}
 	}
-Type:
 	for _, qt := range q.Type {
 		if strings.Contains(strings.ToLower(c.Type), qt) {
 			continue
-		}
-		for _, t := range c.Types {
-			if strings.Contains(strings.ToLower(t), qt) {
-				continue Type
-			}
 		}
 		debugf("type %q", qt)
 		return false
@@ -142,9 +130,11 @@ func validColor(c rune) bool {
 func (c *Client) Query(q string) ([]*CardInfo, error) {
 	var match []*CardInfo
 	query := ParseQuery(q)
+	seen := map[string]bool{}
 	for _, card := range c.cards {
-		if query.Match(card) {
+		if query.Match(card) && !seen[card.Name] {
 			match = append(match, card)
+			seen[card.Name] = true
 		}
 	}
 	return match, nil
