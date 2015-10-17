@@ -15,6 +15,10 @@ type Price struct {
 	Low, Mid, High int // Expressed in cents of a US dollar.
 }
 
+func (p Price) String() string {
+	return fmt.Sprintf("$%.2f $%.2f $%.2f", float32(p.Low)/100, float32(p.Mid)/100, float32(p.High)/100)
+}
+
 func Get(name string) (prices *Price, err error) {
 	resp, err := http.Get("http://magic.tcgplayer.com/db/WP-CH.asp?CN=" + url.QueryEscape(name))
 	if err != nil {
