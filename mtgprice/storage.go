@@ -143,22 +143,24 @@ func (c *Client) getEntry(cardName string) (e entry, err error) {
 	if e.TCGPrice == nil {
 		prices, err := c.priceForCard(ci)
 		if err != nil {
-			return e, err
+			log.Println("Fetching price:", err)
+		} else {
+			e.TCGPrice = prices
+			touch = true
 		}
-		e.TCGPrice = prices
-		touch = true
 	}
-	if e.GathererInfo == nil && false {
+	if e.GathererInfo == nil {
 		name := ci.Name
 		if len(ci.Names) != 0 {
 			name = strings.Join(ci.Names, " & ")
 		}
 		gInfo, err := gatherer.InfoByName(name)
 		if err != nil {
-			return e, err
+			log.Println("Fetching gatherer:", err)
+		} else {
+			e.GathererInfo = gInfo
+			touch = true
 		}
-		e.GathererInfo = gInfo
-		touch = true
 	}
 	if touch {
 		go c.set(ci.Name, e)
