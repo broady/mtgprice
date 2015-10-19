@@ -40,6 +40,26 @@ type CardInfo struct {
 	Toughness    string   `json:"toughness,omitempty"`
 	Type         string   `json:"type"`
 	Types        []string `json:"types"`
+	Colors       []string `json:"colors"`
+	Text         string   `json:"text"`
+}
+
+func (c *CardInfo) String() string {
+	return c.Name
+}
+
+func (c *CardInfo) Detail() string {
+	s := fmt.Sprintf("%v %v", c.Name, c.ManaCost)
+	for _, t := range c.Types {
+		if t == "Creature" {
+			s += fmt.Sprintf(" (%v/%v)", c.Power, c.Toughness)
+		}
+	}
+	s += "\n" + c.Type
+	if c.Text != "" {
+		s += "\n" + c.Text
+	}
+	return s
 }
 
 // entry represents an entry for the database.
@@ -105,49 +125,47 @@ func (c *Client) CardInfo(cardName string) (ci CardInfo, ok bool) {
 	return
 }
 
-func (c *Client) getEntry(cardName string) (result entry, err error) {
+func (c *Client) getEntry(cardName string) (e entry, err error) {
 	cardName = normalizeCardName(cardName)
-	e := new(entry)
 	ci, ok := c.CardInfo(cardName)
 	if !ok {
-		return *e, errors.New("card not found")
+		return e, errors.New("card not found")
 	}
-	err = c.get(ci.Name, e)
+	err = c.get(ci.Name, &e)
 	if err != nil && err != doesNotExistError {
-		return *e, err
+		return e, err
 	}
 	if err == nil && e.TCGPrice != nil && e.GathererInfo != nil {
 		//log.Printf("cache hit: %s", cardName)
-		return *e, nil
+		return e, nil
 	}
+	touch := false
 	if e.TCGPrice == nil {
-		log.Printf("fetching tcg price: %s", ci.Name)
 		prices, err := c.priceForCard(ci)
 		if err != nil {
-			return *e, err
+			log.Println("Fetching price:", err)
+		} else {
+			e.TCGPrice = prices
+			touch = true
 		}
-		e.TCGPrice = prices
-		go c.set(ci.Name, e)
 	}
 	if e.GathererInfo == nil {
 		name := ci.Name
 		if len(ci.Names) != 0 {
 			name = strings.Join(ci.Names, " & ")
 		}
-		log.Printf("fetching gatherer data: %s", name)
-		var gInfo *gatherer.CardInfo
-		//if ci.MultiverseID != nil {
-		//gInfo, err = gatherer.Info(*ci.MultiverseID)
-		//} else {
-		gInfo, err = gatherer.InfoByName(name)
-		//}
+		gInfo, err := gatherer.InfoByName(name)
 		if err != nil {
-			return *e, err
+			log.Println("Fetching gatherer:", err)
+		} else {
+			e.GathererInfo = gInfo
+			touch = true
 		}
-		e.GathererInfo = gInfo
+	}
+	if touch {
 		go c.set(ci.Name, e)
 	}
-	return *e, nil
+	return e, nil
 }
 
 type info struct {
