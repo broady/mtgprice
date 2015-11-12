@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"log"
 	"net/http"
 	"os"
@@ -11,12 +12,18 @@ import (
 	"syscall"
 
 	"go/build"
+
 	"github.com/broady/mtgprice/mtgprice"
 )
 
-var client *mtgprice.Client
+var (
+	client *mtgprice.Client
+	addr   = flag.String("addr", ":8080", "address/port to listen on")
+)
 
 func main() {
+	flag.Parse()
+
 	staticDir, err := staticDir()
 	if err != nil {
 		log.Fatalf("could not find static dir")
@@ -36,7 +43,7 @@ func main() {
 	http.Handle("/static", http.StripPrefix("static", http.FileServer(http.Dir(staticDir))))
 	http.HandleFunc("/api/price", priceHandler)
 	http.HandleFunc("/api/info", infoHandler)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(*addr, nil))
 }
 
 func staticDir() (string, error) {
