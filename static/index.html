@@ -26,13 +26,12 @@
 <div id="card"><img></div>
 <div class=right>
   <div id=min-price-filter></div>
-  <div id=rating-filter></div>
 </div>
 
 <table class=dc-datatable>
   <thead>
     <tr>
-      <th>N</th><th>Card</th><th>Low</th><th>Median</th><th>High</th><th>Rating</th><th>Votes</th>
+      <th>N</th><th>Card</th><th>Low</th><th>Median</th><th>High</th>
     </tr>
     <tr>
       <th>Total</th><th class=n></th><th class=low></th><th class=mid></th><th class=hi></th>
@@ -53,9 +52,6 @@
   var globalId = 0;
   var idDimension = data.dimension(function(d) { return d.id });
   var nameDimension = data.dimension(function(d) { return d.name });
-  var accessRating = function(d) { return d.GathererInfo.CommunityRating };
-  var ratingDimension = data.dimension(accessRating);
-  var quantizedRatingDimension = data.dimension(function(d) { return Math.floor(accessRating(d) * 8) / 8 });
   var accessPriceMin = function(d) { return d.TCGPrice.Low };
   var minPriceDimension = data.dimension(accessPriceMin);
   var minPriceSum = data.groupAll().reduceSum(accessPriceMin);
@@ -98,16 +94,6 @@
     .gap(0);
   minPriceChart.xAxis().tickFormat(formatPrice);
 
-  var ratingChart = dc.barChart('#rating-filter')
-    .height(200)
-    .width(500)
-    .group(quantizedRatingDimension.group())
-    .dimension(quantizedRatingDimension)
-    .elasticY(true)
-    .x(d3.scale.linear().domain([-0.1, 5.1]))
-    .barPadding(10)
-    .xAxisPadding('10%');
-
   var dataTable = dc.dataTable('.dc-datatable')
     .renderlet(function() {
       $('th.low').text(formatPrice(
@@ -126,9 +112,7 @@
       function(d) { return d.name },
       formatPrice(accessPriceMin),
       formatPrice(accessPriceMid),
-      formatPrice(accessPriceHi),
-      function(d) { return d.GathererInfo.CommunityRating },
-      function(d) { return d.GathererInfo.CommunityVotes }
+      formatPrice(accessPriceHi)
     ]);
 
   dc.renderAll();
