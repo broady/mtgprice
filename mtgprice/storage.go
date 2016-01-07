@@ -32,16 +32,22 @@ type CardInfo struct {
 	Name  string   `json:"name"`
 	Names []string `json:"names,omitempty"`
 	// NOTE: there is one card with .5 mana cost.
-	CMC          float64  `json:"cmc"`
-	MultiverseID *int     `json:"multiverseid,omitempty"`
-	ManaCost     string   `json:"manaCost"`
-	Rarity       string   `json:"rarity"`
-	Power        string   `json:"power,omitempty"`
-	Toughness    string   `json:"toughness,omitempty"`
-	Type         string   `json:"type"`
-	Types        []string `json:"types"`
-	Colors       []string `json:"colors"`
-	Text         string   `json:"text"`
+	CMC          float64    `json:"cmc"`
+	MultiverseID *int       `json:"multiverseid,omitempty"`
+	ManaCost     string     `json:"manaCost"`
+	Rarity       string     `json:"rarity"`
+	Power        string     `json:"power,omitempty"`
+	Toughness    string     `json:"toughness,omitempty"`
+	Type         string     `json:"type"`
+	Types        []string   `json:"types"`
+	Colors       []string   `json:"colors"`
+	Text         string     `json:"text"`
+	Legalities   []Legality `json:"legalities"`
+}
+
+type Legality struct {
+	Format   string `json:"format"`
+	Legality string `json:"legality"`
 }
 
 func (c *CardInfo) String() string {
@@ -58,6 +64,15 @@ func (c *CardInfo) Detail() string {
 	s += "\n" + c.Type
 	if c.Text != "" {
 		s += "\n" + c.Text
+	}
+	legality := map[string][]string{}
+	for _, l := range c.Legalities {
+		if l.Legality != "Legal" {
+			legality[l.Legality] = append(legality[l.Legality], l.Format)
+		}
+	}
+	for l, fs := range legality {
+		s += fmt.Sprintf("\n%v: %v", l, strings.Join(fs, ", "))
 	}
 	return s
 }
