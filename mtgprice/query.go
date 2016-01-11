@@ -8,6 +8,7 @@ import (
 
 type Query struct {
 	Name, Rule, Type []string
+	ExactName        string
 
 	// Color may be "w", "u", "b", "r", "g", "m" (multicolored),
 	// or any of the previous characters with a "!" prefix (not).
@@ -15,6 +16,9 @@ type Query struct {
 }
 
 func (q *Query) Match(c *CardInfo) bool {
+	if n := q.ExactName; n != "" {
+		return strings.ToLower(c.Name) == n
+	}
 	for _, qn := range q.Name {
 		if strings.Contains(strings.ToLower(c.Name), qn) {
 			continue
@@ -91,29 +95,34 @@ func shortColor(long string) string {
 
 func ParseQuery(s string) *Query {
 	var q Query
+	s = strings.ToLower(strings.TrimSpace(s))
+	if strings.HasPrefix(s, "!") {
+		q.ExactName = s[1:]
+		return &q
+	}
 	for _, s := range strings.Fields(s) {
 		p := func(p string) bool { return strings.HasPrefix(s, p) }
 		switch {
 		case p("o:"):
-			q.Rule = append(q.Rule, strings.ToLower(s[2:]))
+			q.Rule = append(q.Rule, s[2:])
 		case p("t:"):
-			q.Type = append(q.Type, strings.ToLower(s[2:]))
+			q.Type = append(q.Type, s[2:])
 		case p("c:"):
-			for _, c := range strings.ToLower(s[2:]) {
+			for _, c := range s[2:] {
 				if !validColor(c) {
 					continue
 				}
 				q.Color = append(q.Color, string(c))
 			}
 		case p("c!"):
-			for _, c := range strings.ToLower(s[2:]) {
+			for _, c := range s[2:] {
 				if !validColor(c) {
 					continue
 				}
 				q.Color = append(q.Color, "!"+string(c))
 			}
 		default:
-			q.Name = append(q.Name, strings.ToLower(s))
+			q.Name = append(q.Name, s)
 		}
 	}
 	return &q
