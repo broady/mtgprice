@@ -43,8 +43,8 @@ func Get(name string) (prices *Price, err error) {
 		Next().
 		Children().
 		Map(func(idx int, sel *goquery.Selection) string {
-		return sel.Text()
-	})
+			return sel.Text()
+		})
 	if len(nodeText) != 3 {
 		return nil, fmt.Errorf("could not find prices on page (unexpected element length for price section)")
 	}
